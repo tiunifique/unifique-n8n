@@ -3,6 +3,8 @@
 import requests
 import json
 import urllib3
+import hashlib
+import re
 
 # Desativar avisos de SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -52,6 +54,13 @@ def get_devices(controller_id, session, token, site_id):
     response = session.get(devices_url, headers=headers, verify=False)
     return response.json()
 
+# Função para gerar um ID numérico baseado na MAC Address
+def generate_numeric_id_from_mac(mac):
+    numeric = re.sub(r'[^0-9]', '', mac)
+    if numeric:
+        return int(numeric[:15])  # Limita para não ultrapassar tamanho de int
+    return 0
+
 # Fluxo principal
 controller_id = get_controller_id()
 session, token = login(controller_id)
@@ -80,13 +89,17 @@ if 'result' in sites_info and 'data' in sites_info['result']:
                 if device.get('status') == 24:
                     continue
 
+                mac = device.get('mac', '')
+                unique_id = generate_numeric_id_from_mac(mac) if mac else None
+
                 # Coletar campos
                 result.append({
+                    "id": unique_id,
                     "site_nome": site_name,
                     "site_id": site_id,
                     "device_type": device.get('type'),
                     "device_nome": device.get('name'),
-                    "device_mac": device.get('mac'),
+                    "device_mac": mac,
                     "device_ip": device.get('ip'),
                     "device_publicip": device.get('publicIp'),
                     "device_uptime": device.get('uptime'),
