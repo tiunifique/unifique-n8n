@@ -90,6 +90,7 @@ if 'result' in sites_info and 'data' in sites_info['result']:
                     "device_ip": device.get('ip'),
                     "device_publicip": device.get('publicIp'),
                     "device_uptime": device.get('uptime'),
+                    "device_lastSeen": device.get('lastSeen'),
                     "device_status": device.get('statusCategory'),
                     "device_status1": device.get('status'),
                     "device_adoptFailType": device.get('adoptFailType'),
