@@ -72,44 +72,32 @@ if 'result' in sites_info and 'data' in sites_info['result']:
 
         # Obter os dispositivos do site
         devices_info = get_devices(controller_id, session, token, site_id)
-        #print(json.dumps(devices_info, indent=4))
+
         # Verificar se a resposta contém os dispositivos corretamente
         if 'result' in devices_info:
-            # Acessar a lista de dispositivos diretamente no campo 'result'
             for device in devices_info['result']:
-                device_type = device.get('type')
-                device_nome = device.get('name')
-                device_mac = device.get('mac')
-                device_ip = device.get('ip')
-                device_publicip = device.get('publicIp')
-                device_uptime = device.get('uptime')
-                device_status = device.get('statusCategory')
-                device_status1 = device.get('status')
-                device_adoptFailType = device.get('adoptFailType')
-                device_cpuutil = device.get('cpuUtil')
-                device_memutil =  device.get('memUtil')
-                device_download = device.get('download')
-                device_upload = device.get('upload')
-                device_clientnum = device.get('clientNum')
+                # Aplicar filtro: ignorar devices com status 24
+                if device.get('status') == 24:
+                    continue
 
-                # Adicionar o resultado à lista
+                # Coletar campos
                 result.append({
                     "site_nome": site_name,
                     "site_id": site_id,
-                    "device_type": device_type,
-                    "device_nome": device_nome,
-                    "device_mac": device_mac,
-                    "device_ip": device_ip,
-                    "device_publicip": device_publicip,
-                    "device_uptime": device_uptime,
-                    "device_status": device_status,
-                    "device_status1": device_status1,
-                    "device_adoptFailType": device_adoptFailType,
-                    "device_cpuutil": device_cpuutil,
-                    "device_memutil": device_memutil,
-                    "device_download": device_download,
-                    "device_upload": device_upload,
-                    "device_clientnum": device_clientnum
+                    "device_type": device.get('type'),
+                    "device_nome": device.get('name'),
+                    "device_mac": device.get('mac'),
+                    "device_ip": device.get('ip'),
+                    "device_publicip": device.get('publicIp'),
+                    "device_uptime": device.get('uptime'),
+                    "device_status": device.get('statusCategory'),
+                    "device_status1": device.get('status'),
+                    "device_adoptFailType": device.get('adoptFailType'),
+                    "device_cpuutil": device.get('cpuUtil'),
+                    "device_memutil": device.get('memUtil'),
+                    "device_download": device.get('download'),
+                    "device_upload": device.get('upload'),
+                    "device_clientnum": device.get('clientNum')
                 })
 
 # Imprimir o JSON final formatado com os campos desejados
