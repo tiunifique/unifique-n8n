@@ -84,6 +84,8 @@ if 'result' in sites_info and 'data' in sites_info['result']:
                 device_publicip = device.get('publicIp')
                 device_uptime = device.get('uptime')
                 device_status = device.get('statusCategory')
+                device_status1 = device.get('status')
+                device_adoptFailType = device.get('adoptFailType')
                 device_cpuutil = device.get('cpuUtil')
                 device_memutil =  device.get('memUtil')
                 device_download = device.get('download')
@@ -101,6 +103,8 @@ if 'result' in sites_info and 'data' in sites_info['result']:
                     "device_publicip": device_publicip,
                     "device_uptime": device_uptime,
                     "device_status": device_status,
+                    "device_status1": device_status1,
+                    "device_adoptFailType": device_adoptFailType,
                     "device_cpuutil": device_cpuutil,
                     "device_memutil": device_memutil,
                     "device_download": device_download,
