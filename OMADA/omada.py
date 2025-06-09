@@ -94,7 +94,7 @@ if 'result' in sites_info and 'data' in sites_info['result']:
 
                 # Coletar campos
                 result.append({
-                    "id": unique_id,
+                    "Id": unique_id,
                     "site_nome": site_name,
                     "site_id": site_id,
                     "device_type": device.get('type'),
