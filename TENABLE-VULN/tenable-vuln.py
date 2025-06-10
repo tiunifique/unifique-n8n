@@ -46,7 +46,6 @@ if os.path.exists(env_path):
 
             for asset in assets:
                 asset_id = asset.get("id")
-                asset_uuid = asset.get("uuid") # Get the UUID for filtering vulnerabilities
                 name = None
 
                 # Try to get a friendly name (hostname or FQDN)
@@ -60,19 +59,47 @@ if os.path.exists(env_path):
                     name = asset.get("ipv4") or asset.get("ipv6") or "Desconhecido"
 
                 vuln_count = 0
+                asset_uuid = asset.get("uuid") # Get the UUID from the initial asset list
+
                 if asset_uuid:
                     try:
-                        # Query vulnerabilities specific to this asset using its UUID
-                        # tio.vulnerabilities.list returns an iterator
+                        # Attempt to count vulnerabilities using the UUID from the initial list
                         vulnerabilities_for_asset = tio.vulnerabilities.list(asset_uuid=asset_uuid)
-                        # Count the number of vulnerabilities for the current asset
                         for _ in vulnerabilities_for_asset:
                             vuln_count += 1
-                        print(f"Asset: {name}, UUID: {asset_uuid}, Vulnerabilities: {vuln_count}")
+                        print(f"Asset: {name} (UUID: {asset_uuid}), Vulnerabilities: {vuln_count} (via UUID)")
                     except Exception as e:
-                        print(f"Error fetching vulnerabilities for asset {name} (UUID: {asset_uuid}): {e}")
+                        print(f"Error fetching vulnerabilities for asset {name} (UUID: {asset_uuid}) using vulnerabilities.list: {e}")
+                        # Fallback to details if UUID list fails, though unlikely if UUID is present
+                        details = tio.assets.details(asset_id)
+                        vulns_from_details = details.get("vulnerabilities", [])
+                        vuln_count = sum(v.get("count", 0) for v in vulns_from_details)
+                        print(f"  --> Falling back to sum from asset details. Vulnerabilities: {vuln_count}")
                 else:
-                    print(f"Warning: Asset {name} (ID: {asset_id}) has no UUID. Skipping vulnerability count.")
+                    print(f"Asset: {name} (ID: {asset_id}) has no UUID in initial list. Fetching details...")
+                    try:
+                        # If UUID is missing from the initial list, fetch full asset details
+                        details = tio.assets.details(asset_id)
+                        asset_uuid_from_details = details.get("uuid") # Check for UUID in details
+
+                        if asset_uuid_from_details:
+                            # If UUID found in details, use it to count vulnerabilities
+                            vulnerabilities_for_asset = tio.vulnerabilities.list(asset_uuid=asset_uuid_from_details)
+                            for _ in vulnerabilities_for_asset:
+                                vuln_count += 1
+                            print(f"Asset: {name} (UUID: {asset_uuid_from_details}), Vulnerabilities: {vuln_count} (via UUID from details)")
+                        else:
+                            # Fallback: If UUID is still missing after details fetch,
+                            # sum counts from the 'vulnerabilities' field in the details response.
+                            # Note: This usually sums vulnerabilities by severity, not total findings.
+                            vulns_from_details = details.get("vulnerabilities", [])
+                            vuln_count = sum(v.get("count", 0) for v in vulns_from_details)
+                            print(f"  Asset: {name} (ID: {asset_id}) still no UUID. Falling back to sum from asset details. Vulnerabilities: {vuln_count}")
+
+                    except Exception as e:
+                        print(f"Error fetching details or vulnerabilities for asset {name} (ID: {asset_id}): {e}")
+                        print(f"  --> Setting vulnerability count to 0 for this asset due to error.")
+                        vuln_count = 0 # Ensure count is 0 if an error occurs
 
                 assets_data.append({
                     "name": name,
