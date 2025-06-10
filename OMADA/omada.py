@@ -77,7 +77,7 @@ if 'result' in sites_info and 'data' in sites_info['result']:
         if 'result' in devices_info:
             for device in devices_info['result']:
                 # Aplicar filtro: ignorar devices com status 24
-                if device.get('status') == 24:
+                if device.get('status') in (20, 24):
                     continue
 
                 # Coletar campos
