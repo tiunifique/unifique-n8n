@@ -99,54 +99,6 @@ if os.path.exists(env_path):
                     **severities,
                     "total": total
                 })
-                # INÍCIO do envio ao NocoDB
-                noco_token = os.getenv("NOCO_API_TOKEN")
-                noco_url = os.getenv("NOCO_API_URL")
-                noco_table = os.getenv("NOCO_TABLE_ID")
-                noco_view = os.getenv("NOCO_VIEW_ID")
-                
-                noco_headers = {
-                    "xc-token": noco_token,
-                    "Content-Type": "application/json"
-                }
-                
-                # Busca registros existentes
-                get_url = f"{noco_url}/tables/{noco_table}/records"
-                params = {
-                    "offset": "0",
-                    "limit": "999",
-                    "where": "",
-                    "viewId": noco_view
-                }
-                existing_resp = requests.get(get_url, headers=noco_headers, params=params)
-                
-                existing_asset_ids = {}
-                if existing_resp.status_code == 200:
-                    for item in existing_resp.json().get("list", []):
-                        tenable_id = item.get("tenable_id")
-                        row_id = item.get("Id")
-                        if tenable_id:
-                            existing_asset_ids[tenable_id] = row_id
-                else:
-                    print(f"Erro ao buscar registros do NocoDB: {existing_resp.text}")
-                    exit()
-                
-                # Cria ou atualiza registros
-                for asset in formatted_assets:
-                    tenable_id = asset["tenable_id"]
-                
-                    if tenable_id in existing_asset_ids:
-                        # Atualizar
-                        row_id = existing_asset_ids[tenable_id]
-                        put_url = f"{noco_url}/tables/{noco_table}/records/{row_id}"
-                        put_resp = requests.put(put_url, headers=noco_headers, json=asset)
-                        print(f"[UPDATE] {tenable_id} | Status {put_resp.status_code}")
-                    else:
-                        # Criar
-                        post_url = f"{noco_url}/tables/{noco_table}/records"
-                        post_resp = requests.post(post_url, headers=noco_headers, json=asset)
-                        print(f"[CREATE] {tenable_id} | Status {post_resp.status_code}")
-                # FIM do envio ao NocoDB
 
             print(json.dumps(formatted_assets, indent=4))
 
