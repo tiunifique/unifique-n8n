@@ -51,17 +51,20 @@ if os.path.exists(env_path):
                 for asset in data.get("assets", []):
                     agent = asset.get("agent_name", [])
                     fqdn = asset.get("fqdn", [])
-                    ipv4 = asset.get("ipv4", [])
-                    
+                    ipv4_list = asset.get("ipv4", [])
+                
                     if agent:
                         asset_name = agent[0]
                     elif fqdn:
                         asset_name = fqdn[0]
-                    elif ipv4:
-                        asset_name = ipv4[0]
+                    elif ipv4_list:
+                        asset_name = ipv4_list[0]
                     else:
                         asset_name = "Desconhecido"
-
+                
+                    ip = ipv4_list[0] if ipv4_list else "-"
+                    total = asset.get("total", 0)
+                
                     severities = {
                         "info": 0,
                         "low": 0,
@@ -69,19 +72,20 @@ if os.path.exists(env_path):
                         "high": 0,
                         "critical": 0
                     }
-
+                
                     for sev in asset.get("severities", []):
                         name = sev.get("name", "").lower()
                         count = sev.get("count", 0)
                         if name in severities:
                             severities[name] = count
-
+                
                     formatted_assets.append({
                         "asset": asset_name,
-                        "ip": ipv4,
+                        "ip": ip,
                         **severities,
                         "total": total
                     })
+
 
                 # Exibe resultado limpo
                 print(json.dumps(formatted_assets, indent=4))
