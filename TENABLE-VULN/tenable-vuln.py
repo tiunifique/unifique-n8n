@@ -93,10 +93,9 @@ if os.path.exists(env_path):
                     macs = info_data.get("info", {}).get("mac_address", [])
 
                 formatted_assets.append({
-                    "asset_id": asset_id,
-                    "asset": asset_name,
-                    "ip": ip,
-                    "macs": macs,
+                    "tenable_id": asset_id,
+                    "tenable_name": asset_name,
+                    "tenable_macs": macs,
                     **severities,
                     "total": total
                 })
