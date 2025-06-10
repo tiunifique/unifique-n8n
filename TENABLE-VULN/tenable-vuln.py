@@ -78,7 +78,7 @@ if os.path.exists(env_path):
 
                     formatted_assets.append({
                         "asset": asset_name,
-                        "ip": ip,
+                        "ip": ipv4,
                         **severities,
                         "total": total
                     })
