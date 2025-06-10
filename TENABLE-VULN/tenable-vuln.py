@@ -10,11 +10,10 @@ from delinea.secrets.vault import (
     SecretsVaultError
 )
 
-# Caminho para o .env
+# Carrega variáveis do .env
 current_dir = os.path.dirname(os.path.realpath(__file__))
 env_path = os.path.join(current_dir, ".env")
 
-# Carrega variáveis de ambiente
 if os.path.exists(env_path):
     load_dotenv(env_path)
 
@@ -25,7 +24,7 @@ if os.path.exists(env_path):
 
     if BASE_URL and CLIENT_ID and CLIENT_SECRET and PATH_ID:
         try:
-            # Autentica no Delinea e obtém as chaves do Tenable
+            # Autentica no Delinea
             authorizer = PasswordGrantAuthorizer(BASE_URL, CLIENT_ID, CLIENT_SECRET)
             vault = SecretsVault(BASE_URL, authorizer)
             secret = VaultSecret(**vault.get_secret(PATH_ID))
@@ -33,65 +32,76 @@ if os.path.exists(env_path):
             ACCESS_KEY = secret.data["CLIENT_ID"]
             SECRET_KEY = secret.data["SECRET_ID"]
 
-            # Requisição ao endpoint da Tenable
-            url = "https://cloud.tenable.com/workbenches/assets/vulnerabilities"
+            # Cabeçalhos para a Tenable API
             headers = {
                 "accept": "application/json",
                 "X-ApiKeys": f"accessKey={ACCESS_KEY}; secretKey={SECRET_KEY}"
             }
 
-            response = requests.get(url, headers=headers)
+            # Requisição principal
+            vuln_url = "https://cloud.tenable.com/workbenches/assets/vulnerabilities"
+            resp = requests.get(vuln_url, headers=headers)
 
-            if response.status_code == 200:
-                data = response.json()
+            if resp.status_code != 200:
+                print(f"Erro {resp.status_code}: {resp.text}")
+                exit()
 
-                # Formata a saída por asset
-                formatted_assets = []
+            data = resp.json()
+            formatted_assets = []
 
-                for asset in data.get("assets", []):
-                    agent = asset.get("agent_name", [])
-                    fqdn = asset.get("fqdn", [])
-                    ipv4_list = asset.get("ipv4", [])
-                
-                    if agent:
-                        asset_name = agent[0]
-                    elif fqdn:
-                        asset_name = fqdn[0]
-                    elif ipv4_list:
-                        asset_name = ipv4_list[0]
-                    else:
-                        asset_name = "Desconhecido"
-                
-                    ip = ipv4_list[0] if ipv4_list else "-"
-                    total = asset.get("total", 0)
-                
-                    severities = {
-                        "info": 0,
-                        "low": 0,
-                        "medium": 0,
-                        "high": 0,
-                        "critical": 0
-                    }
-                
-                    for sev in asset.get("severities", []):
-                        name = sev.get("name", "").lower()
-                        count = sev.get("count", 0)
-                        if name in severities:
-                            severities[name] = count
-                
-                    formatted_assets.append({
-                        "asset": asset_name,
-                        "ip": ip,
-                        **severities,
-                        "total": total
-                    })
+            for asset in data.get("assets", []):
+                asset_id = asset.get("id", "unknown")
 
+                # Asset name
+                agent = asset.get("agent_name", [])
+                fqdn = asset.get("fqdn", [])
+                ipv4_list = asset.get("ipv4", [])
 
-                # Exibe resultado limpo
-                print(json.dumps(formatted_assets, indent=4))
+                if agent:
+                    asset_name = agent[0]
+                elif fqdn:
+                    asset_name = fqdn[0]
+                elif ipv4_list:
+                    asset_name = ipv4_list[0]
+                else:
+                    asset_name = "Desconhecido"
 
-            else:
-                print(f"Erro {response.status_code}: {response.text}")
+                ip = ipv4_list[0] if ipv4_list else "-"
+                total = asset.get("total", 0)
+
+                # Inicializa severidades
+                severities = {
+                    "info": 0,
+                    "low": 0,
+                    "medium": 0,
+                    "high": 0,
+                    "critical": 0
+                }
+
+                for sev in asset.get("severities", []):
+                    name = sev.get("name", "").lower()
+                    count = sev.get("count", 0)
+                    if name in severities:
+                        severities[name] = count
+
+                # Obtem MAC address via /workbenches/assets/{asset_id}/info
+                info_url = f"https://cloud.tenable.com/workbenches/assets/{asset_id}/info"
+                info_resp = requests.get(info_url, headers=headers)
+                macs = []
+                if info_resp.status_code == 200:
+                    info_data = info_resp.json()
+                    macs = info_data.get("info", {}).get("mac_address", [])
+
+                formatted_assets.append({
+                    "asset_id": asset_id,
+                    "asset": asset_name,
+                    "ip": ip,
+                    "macs": macs,
+                    **severities,
+                    "total": total
+                })
+
+            print(json.dumps(formatted_assets, indent=4))
 
         except SecretsVaultAccessError as e:
             print(f"[Delinea Access Error] {e.message}")
