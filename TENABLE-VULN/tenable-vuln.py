@@ -87,10 +87,8 @@ if os.path.exists(env_path):
                 # Obtem MAC address via /workbenches/assets/{asset_id}/info
                 info_url = f"https://cloud.tenable.com/workbenches/assets/{asset_id}/info"
                 info_resp = requests.get(info_url, headers=headers)
-                macs =
-                if info_resp.status_code == 200:
-                    info_data = info_resp.json()
-                    macs = info_data.get("info", {}).get("mac_address", [])
+                info_data = info_resp.json()
+                macs = info_data.get("info", {}).get("mac_address", [])
 
                 formatted_assets.append({
                     "tenable_id": asset_id,
