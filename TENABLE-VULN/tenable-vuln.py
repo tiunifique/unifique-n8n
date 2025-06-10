@@ -43,8 +43,8 @@ if os.path.exists(env_path):
                 asset_id = asset.get("id")
                 name = asset.get("hostname") or asset.get("ipv4") or asset.get("ipv6") or "Desconhecido"
 
-                # chamada direta via GET
-                vuln_resp = tio.get(f"workbenches/assets/{asset_id}/vulnerabilities")
+                # Chamada direta via GET e extração do JSON
+                vuln_resp = tio.get(f"workbenches/assets/{asset_id}/vulnerabilities").json()
                 vuln_count = len(vuln_resp.get("vulnerabilities", []))
 
                 results.append({
