@@ -49,9 +49,18 @@ if os.path.exists(env_path):
                 formatted_assets = []
 
                 for asset in data.get("assets", []):
-                    asset_name = asset.get("agent_name", ["Desconhecido"])[0]
-                    ip = asset.get("ipv4", ["-"])[0]
-                    total = asset.get("total", 0)
+                    agent = asset.get("agent_name", [])
+                    fqdn = asset.get("fqdn", [])
+                    ipv4 = asset.get("ipv4", [])
+                    
+                    if agent:
+                        asset_name = agent[0]
+                    elif fqdn:
+                        asset_name = fqdn[0]
+                    elif ipv4:
+                        asset_name = ipv4[0]
+                    else:
+                        asset_name = "Desconhecido"
 
                     severities = {
                         "info": 0,
