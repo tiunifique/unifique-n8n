@@ -36,24 +36,22 @@ if os.path.exists(env_path):
             from tenable.io import TenableIO
             tio = TenableIO(API_CLIENT, API_SECRET)
 
-            # Lista de ativos e suas vulnerabilidades
             results = []
 
-            # Lista todos os ativos
+            # Itera sobre ativos e faz chamada direta ao endpoint de vulnerabilidades
             for asset in tio.workbenches.assets():
                 asset_id = asset.get("id")
-                hostname = asset.get("hostname") or asset.get("ipv4") or asset.get("ipv6") or "Desconhecido"
+                name = asset.get("hostname") or asset.get("ipv4") or asset.get("ipv6") or "Desconhecido"
 
-                # Busca vulnerabilidades do ativo
-                vulns = tio.workbenches.asset_vulnerabilities(asset_id)
-                vuln_count = len(vulns.get("vulnerabilities", []))
+                # chamada direta via GET
+                vuln_resp = tio.get(f"workbenches/assets/{asset_id}/vulnerabilities")
+                vuln_count = len(vuln_resp.get("vulnerabilities", []))
 
                 results.append({
-                    "name": hostname,
+                    "name": name,
                     "vulnerabilities": vuln_count
                 })
 
-            # Exibe em formato JSON
             print(json.dumps(results, indent=4))
 
         except SecretsVaultAccessError as e:
