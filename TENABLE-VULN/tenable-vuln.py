@@ -9,14 +9,12 @@ from delinea.secrets.vault import (
     VaultSecret
 )
 
-# Caminho para o arquivo .env
+# Caminho para o arquivo .env na mesma pasta do script
 current_dir = os.path.dirname(os.path.realpath(__file__))
 env_path = os.path.join(current_dir, ".env")
-
-# Valor padrão para campos ausentes
 null = "-"
 
-# Verifica e carrega o .env
+# Carrega variáveis de ambiente
 if os.path.exists(env_path):
     load_dotenv(env_path)
 
@@ -27,32 +25,46 @@ if os.path.exists(env_path):
 
     if BASE_URL and CLIENT_ID and CLIENT_SECRET and PATH_ID:
         try:
-            # Autenticação no Delinea
+            # Autenticação com Delinea
             authorizer = PasswordGrantAuthorizer(BASE_URL, CLIENT_ID, CLIENT_SECRET)
             vault = SecretsVault(BASE_URL, authorizer)
             secret = VaultSecret(**vault.get_secret(PATH_ID))
 
-            # Extrai credenciais do Tenable armazenadas no cofre
             API_CLIENT = secret.data["CLIENT_ID"]
             API_SECRET = secret.data["SECRET_ID"]
 
-            # Conecta à API do Tenable.io
+            # Conexão com Tenable.io
             from tenable.io import TenableIO
             tio = TenableIO(API_CLIENT, API_SECRET)
 
-            # Lista de ativos com nome e total de vulnerabilidades
+            # Busca ativos e detalhes com contagem de vulnerabilidades
             assets_data = []
-
-            # Busca os ativos
-            assets = tio.v3.explore.assets.search_host()
+            assets = tio.assets.list()  # Lista os ativos com ID
 
             for asset in assets:
-                name = asset.get("name") or asset.get("fqdn", [null])[0] or asset.get("ipv4", null)
-                vulns = asset.get("vulnerabilities", [])
-                vuln_count = sum([v.get("count", 0) for v in vulns])
-                assets_data.append({"name": name, "vulnerabilities": vuln_count})
+                asset_id = asset.get("id")
+                name = None
 
-            # Exibe os resultados em formato JSON
+                # Tenta pegar nome amigável
+                for name_field in asset.get("hostnames", []) + asset.get("fqdn", []):
+                    if name_field:
+                        name = name_field
+                        break
+
+                if not name:
+                    name = asset.get("ipv4") or asset.get("ipv6") or "Desconhecido"
+
+                # Consulta detalhes do ativo para pegar vulnerabilidades
+                details = tio.assets.details(asset_id)
+                vulns = details.get("vulnerabilities", [])
+                vuln_count = sum(v.get("count", 0) for v in vulns)
+
+                assets_data.append({
+                    "name": name,
+                    "vulnerabilities": vuln_count
+                })
+
+            # Exibe em formato JSON
             print(json.dumps(assets_data, indent=4))
 
         except SecretsVaultAccessError as e:
