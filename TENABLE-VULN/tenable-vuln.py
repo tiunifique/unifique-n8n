@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 from delinea.secrets.vault import (
     PasswordGrantAuthorizer,
@@ -8,14 +9,14 @@ from delinea.secrets.vault import (
     VaultSecret
 )
 
-# Define caminho para .env
+# Caminho para o arquivo .env
 current_dir = os.path.dirname(os.path.realpath(__file__))
-env_path = os.path.join(current_dir, f".env")
+env_path = os.path.join(current_dir, ".env")
 
 # Valor padrão para campos ausentes
 null = "-"
 
-# Verifica e carrega .env
+# Verifica e carrega o .env
 if os.path.exists(env_path):
     load_dotenv(env_path)
 
@@ -31,7 +32,7 @@ if os.path.exists(env_path):
             vault = SecretsVault(BASE_URL, authorizer)
             secret = VaultSecret(**vault.get_secret(PATH_ID))
 
-            # Extrai credenciais da Tenable armazenadas no cofre
+            # Extrai credenciais do Tenable armazenadas no cofre
             API_CLIENT = secret.data["CLIENT_ID"]
             API_SECRET = secret.data["SECRET_ID"]
 
@@ -39,14 +40,20 @@ if os.path.exists(env_path):
             from tenable.io import TenableIO
             tio = TenableIO(API_CLIENT, API_SECRET)
 
-            # Busca ativos e mostra nome + quantidade de vulnerabilidades
+            # Lista de ativos com nome e total de vulnerabilidades
+            assets_data = []
+
+            # Busca os ativos
             assets = tio.v3.explore.assets.search_host()
 
             for asset in assets:
                 name = asset.get("name") or asset.get("fqdn", [null])[0] or asset.get("ipv4", null)
                 vulns = asset.get("vulnerabilities", [])
                 vuln_count = sum([v.get("count", 0) for v in vulns])
-                print(f"{name}: {vuln_count} vulnerabilidades")
+                assets_data.append({"name": name, "vulnerabilities": vuln_count})
+
+            # Exibe os resultados em formato JSON
+            print(json.dumps(assets_data, indent=4))
 
         except SecretsVaultAccessError as e:
             print(f"[Delinea Access Error] {e.message}")
