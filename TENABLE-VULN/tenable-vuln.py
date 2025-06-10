@@ -14,7 +14,7 @@ from delinea.secrets.vault import (
 current_dir = os.path.dirname(os.path.realpath(__file__))
 env_path = os.path.join(current_dir, ".env")
 
-# Carrega .env
+# Carrega variáveis de ambiente
 if os.path.exists(env_path):
     load_dotenv(env_path)
 
@@ -25,16 +25,15 @@ if os.path.exists(env_path):
 
     if BASE_URL and CLIENT_ID and CLIENT_SECRET and PATH_ID:
         try:
-            # Autenticando no Delinea
+            # Autentica no Delinea e obtém as chaves do Tenable
             authorizer = PasswordGrantAuthorizer(BASE_URL, CLIENT_ID, CLIENT_SECRET)
             vault = SecretsVault(BASE_URL, authorizer)
             secret = VaultSecret(**vault.get_secret(PATH_ID))
 
-            # Obtém as chaves do Tenable armazenadas no segredo
             ACCESS_KEY = secret.data["CLIENT_ID"]
             SECRET_KEY = secret.data["SECRET_ID"]
 
-            # Chamada autenticada à API do Tenable
+            # Requisição ao endpoint da Tenable
             url = "https://cloud.tenable.com/workbenches/assets/vulnerabilities"
             headers = {
                 "accept": "application/json",
@@ -45,7 +44,39 @@ if os.path.exists(env_path):
 
             if response.status_code == 200:
                 data = response.json()
-                print(json.dumps(data, indent=4))
+
+                # Formata a saída por asset
+                formatted_assets = []
+
+                for asset in data.get("assets", []):
+                    asset_name = asset.get("agent_name", ["Desconhecido"])[0]
+                    ip = asset.get("ipv4", ["-"])[0]
+                    total = asset.get("total", 0)
+
+                    severities = {
+                        "info": 0,
+                        "low": 0,
+                        "medium": 0,
+                        "high": 0,
+                        "critical": 0
+                    }
+
+                    for sev in asset.get("severities", []):
+                        name = sev.get("name", "").lower()
+                        count = sev.get("count", 0)
+                        if name in severities:
+                            severities[name] = count
+
+                    formatted_assets.append({
+                        "asset": asset_name,
+                        "ip": ip,
+                        **severities,
+                        "total": total
+                    })
+
+                # Exibe resultado limpo
+                print(json.dumps(formatted_assets, indent=4))
+
             else:
                 print(f"Erro {response.status_code}: {response.text}")
 
