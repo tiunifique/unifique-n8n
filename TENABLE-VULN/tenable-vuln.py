@@ -10,7 +10,7 @@ from delinea.secrets.vault import (
 
 # Define caminho para .env
 current_dir = os.path.dirname(os.path.realpath(__file__))
-env_path = os.path.join(current_dir, f"../.env")
+env_path = os.path.join(current_dir, f".env")
 
 # Valor padrão para campos ausentes
 null = "-"
