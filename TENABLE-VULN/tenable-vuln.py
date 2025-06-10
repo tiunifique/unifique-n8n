@@ -1,5 +1,6 @@
 import os
 import json
+from collections import defaultdict
 from dotenv import load_dotenv
 from delinea.secrets.vault import (
     PasswordGrantAuthorizer,
@@ -12,7 +13,6 @@ from delinea.secrets.vault import (
 # Caminho para o .env
 current_dir = os.path.dirname(os.path.realpath(__file__))
 env_path = os.path.join(current_dir, ".env")
-null = "-"
 
 if os.path.exists(env_path):
     load_dotenv(env_path)
@@ -24,35 +24,50 @@ if os.path.exists(env_path):
 
     if BASE_URL and CLIENT_ID and CLIENT_SECRET and PATH_ID:
         try:
-            # Autenticando no Delinea
+            # Autenticação no Delinea
             authorizer = PasswordGrantAuthorizer(BASE_URL, CLIENT_ID, CLIENT_SECRET)
             vault = SecretsVault(BASE_URL, authorizer)
             secret = VaultSecret(**vault.get_secret(PATH_ID))
 
-            API_CLIENT = secret.data["CLIENT_ID"]
-            API_SECRET = secret.data["SECRET_ID"]
+            ACCESS_KEY = secret.data["CLIENT_ID"]
+            SECRET_KEY = secret.data["SECRET_ID"]
 
-            # Conectando ao Tenable.io
+            # Conecta ao Tenable
             from tenable.io import TenableIO
-            tio = TenableIO(API_CLIENT, API_SECRET)
+            tio = TenableIO(ACCESS_KEY, SECRET_KEY)
 
-            results = []
+            # Faz chamada direta ao endpoint de vulnerabilidades por asset
+            response = tio.get("workbenches/assets/vulnerabilities").json()
+            asset_vulns = response.get("vulnerabilities", [])
 
-            # Itera sobre ativos e faz chamada direta ao endpoint de vulnerabilidades
-            for asset in tio.workbenches.assets():
-                asset_id = asset.get("id")
-                name = asset.get("hostname") or asset.get("ipv4") or asset.get("ipv6") or "Desconhecido"
+            # Agrupa resultados por asset_id
+            result_by_asset = defaultdict(lambda: {
+                "critical": 0,
+                "high": 0,
+                "medium": 0,
+                "low": 0,
+                "info": 0,
+                "total": 0
+            })
 
-                # Chamada direta via GET e extração do JSON
-                vuln_resp = tio.get(f"workbenches/assets/{asset_id}/vulnerabilities").json()
-                vuln_count = len(vuln_resp.get("vulnerabilities", []))
+            for item in asset_vulns:
+                aid = item.get("asset_id")
+                severity = item.get("severity", "info").lower()
+                count = item.get("count", 0)
 
-                results.append({
-                    "name": name,
-                    "vulnerabilities": vuln_count
-                })
+                if aid:
+                    result_by_asset[aid][severity] += count
+                    result_by_asset[aid]["total"] += count
 
-            print(json.dumps(results, indent=4))
+            # Converte para lista de dicionários
+            final_output = []
+            for aid, data in result_by_asset.items():
+                entry = {"asset_id": aid}
+                entry.update(data)
+                final_output.append(entry)
+
+            # Exibe em formato JSON
+            print(json.dumps(final_output, indent=4))
 
         except SecretsVaultAccessError as e:
             print(f"[Delinea Access Error] {e.message}")
