@@ -1,25 +1,19 @@
+import os
 import json
 import requests
+from dotenv import load_dotenv
 
-# Simulando o valor de entrada
-value = '''{
-    "host": "https://unifi-business.unifique.com.br",
-    "port": "8443",
-    "user": "zabbix.ti",
-    "password": "465$@#$#@"
-}'''
+# Carrega variáveis do arquivo .env
+load_dotenv()
 
-obj = json.loads(value)
-host = obj['host']
-port = obj['port']
-user = obj['user']
-password = obj['password']
+# Lê variáveis de ambiente
+host = os.getenv("HOST")
+port = os.getenv("PORT")
+user = os.getenv("USER")
+password = os.getenv("PASSWORD")
 
 base_url = f"{host}:{port}"
-
-headers = {
-    'Content-Type': 'application/x-www-form-urlencoded'
-}
+headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
 # Realizando o login
 login_url = f"{base_url}/api/login"
@@ -56,7 +50,6 @@ for site in sites:
         site_response.raise_for_status()
 
         print(f"Response from devices endpoint for site {site_id}: {site_response.text}")
-
         site_data = site_response.json()
 
         if not isinstance(site_data.get("data"), list):
