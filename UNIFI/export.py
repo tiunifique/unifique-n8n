@@ -6,25 +6,28 @@ from dotenv import load_dotenv
 # Carrega variáveis do arquivo .env
 load_dotenv()
 
-# Lê variáveis de ambiente
 host = os.getenv("HOST")
 port = os.getenv("PORT")
 user = os.getenv("USER")
 password = os.getenv("PASSWORD")
 
 base_url = f"{host}:{port}"
-headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-
-# Realizando o login
 login_url = f"{base_url}/api/login"
-payload = json.dumps({"username": user, "password": password})
-session = requests.Session()
-response = session.post(login_url, data=payload, headers=headers)
 
+# Payload deve ser string JSON (igual ao script JS), mas com Content-Type x-www-form-urlencoded
+payload = '{"username": "' + user + '", "password": "' + password + '"}'
+headers = {
+    'Content-Type': 'application/x-www-form-urlencoded'
+}
+
+session = requests.Session()
+
+# Realizando login
+response = session.post(login_url, data=payload, headers=headers)
 if response.status_code != 200:
     raise Exception(f"Login failed with status code {response.status_code}: {response.text}")
 
-# Obtendo a lista de sites
+# Obtendo lista de sites
 try:
     response = session.get(f"{base_url}/api/stat/sites")
     response.raise_for_status()
@@ -38,7 +41,7 @@ if not isinstance(sites_data.get("data"), list):
 sites = sites_data["data"]
 result = []
 
-# Para cada site, buscar as informações dos dispositivos (APs)
+# Buscando dispositivos de cada site
 for site in sites:
     site_id = site.get("_id")
     site_name = site.get("name") or site.get("desc")
@@ -70,10 +73,10 @@ for site in sites:
     except Exception as e:
         print(f"Error fetching devices for site {site_id}: {e}")
 
-# Verifica se não há dispositivos encontrados
+# Verifica se encontrou dispositivos
 if not result:
     print(f"No devices found for any site. Result: {json.dumps(result)}")
     raise Exception("No devices found for any site")
 
-# Resultado final em formato JSON
+# Retorna em formato JSON (para LLD no Zabbix, por exemplo)
 print(json.dumps(result))
